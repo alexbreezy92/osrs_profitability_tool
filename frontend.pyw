@@ -70,8 +70,11 @@ class ProfitToolApp:
         # Recipe Selection
         tk.Label(self.scrollable_frame, text="Select Recipe:", font=("Arial", 12)).grid(row=0, column=1, columnspan=2, sticky='w', padx=5)
         self.recipe_combobox = ttk.Combobox(self.scrollable_frame, width=20, state="readonly")
-        self.recipe_combobox.grid(row=0, column=3, columnspan=2, padx=5, pady=5)
+        self.recipe_combobox.grid(row=0, column=2, columnspan=2, padx=5, pady=5)
         self.recipe_combobox.bind("<<ComboboxSelected>>", self.load_selected_recipe)
+
+        # Refresh Prices Button
+        tk.Button(self.scrollable_frame, text="Refresh Prices", command=self.refresh_prices).grid(row=0, column=4, padx=(5, 10), pady=5, sticky='e')
 
         # CALCULATIONS Section
         tk.Label(self.scrollable_frame, text="CALCULATIONS", font=("Arial", 16, "bold")).grid(row=195, column=0, columnspan=5, pady=(40, 0), sticky='ew')
@@ -111,8 +114,8 @@ class ProfitToolApp:
 
         # INPUTS Section
         tk.Label(self.scrollable_frame, text="INPUTS", font=("Arial", 16, "bold")).grid(row=1, column=1, columnspan=3)
-        tk.Button(self.scrollable_frame, text="+", command=self.add_input_item).grid(row=1, column=4, padx=(10, 5), pady=0)
-        tk.Button(self.scrollable_frame, text="-", command=self.remove_input_item).grid(row=1, column=5, padx=(5, 10), pady=0)
+        tk.Button(self.scrollable_frame, text="+", command=self.add_input_item).grid(row=1, column=3, padx=(10, 5), pady=0)
+        tk.Button(self.scrollable_frame, text="-", command=self.remove_input_item).grid(row=1, column=4, padx=(5, 10), pady=0)
 
         ttk.Separator(self.scrollable_frame, orient='horizontal').grid(row=2, column=1, columnspan=5, sticky='ew', pady=5)
 
@@ -126,8 +129,8 @@ class ProfitToolApp:
 
         # OUTPUTS Section
         tk.Label(self.scrollable_frame, text="OUTPUTS", font=("Arial", 16, "bold")).grid(row=97, column=1, columnspan=3, pady=(40, 0))
-        tk.Button(self.scrollable_frame, text="+", command=self.add_output_item).grid(row=97, column=4, padx=(10, 5), pady=(40, 0))
-        tk.Button(self.scrollable_frame, text="-", command=self.remove_output_item).grid(row=97, column=5, padx=(5, 10), pady=(40, 0))
+        tk.Button(self.scrollable_frame, text="+", command=self.add_output_item).grid(row=97, column=3, padx=(10, 5), pady=(40, 0))
+        tk.Button(self.scrollable_frame, text="-", command=self.remove_output_item).grid(row=97, column=4, padx=(5, 10), pady=(40, 0))
 
         ttk.Separator(self.scrollable_frame, orient='horizontal').grid(row=98, column=1, columnspan=5, sticky='ew', pady=5)
 
@@ -138,6 +141,19 @@ class ProfitToolApp:
 
         # Add first output item row by default
         self.add_output_item()
+
+    def refresh_prices(self):
+        """Refresh prices by making a new API call and updating all input/output price fields."""
+        self.tool.prices = self.tool.get_latest_prices()  # Fetch new prices from API
+        # Update all input items
+        for name, qty, price, total in self.inputs:
+            price.delete(0, tk.END)  # Clear existing price to force API price
+            self.on_change_input(name, qty, price, total)
+        # Update all output items
+        for name, qty, price, total in self.outputs:
+            price.delete(0, tk.END)  # Clear existing price to force API price
+            self.on_change_output(name, qty, price, total)
+        self.update_calculations()
 
     def save_recipe(self):
         """Save the current INPUTS and OUTPUTS as a recipe named after the first output item."""
