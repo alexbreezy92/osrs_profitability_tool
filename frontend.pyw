@@ -11,6 +11,7 @@ class ProfitToolApp:
         self.root.resizable(False, False)
         self.tool = ProfitabilityTool()
         self.tool.prices = self.tool.get_latest_prices()
+        self.grimy_ranarr_qty = 0  # Store total Grimy ranarr weed quantity
 
         # Center the window on the screen
         window_width = 400
@@ -275,10 +276,31 @@ class ProfitToolApp:
         """Format item name to match RuneScape convention: first letter of first word capitalized, rest lowercase."""
         return ' '.join(word.capitalize() if i == 0 else word.lower() for i, word in enumerate(name.split()))
 
+    def update_grimy_ranarr_qty(self):
+        """Update the total quantity of Grimy ranarr weed from all inputs."""
+        self.grimy_ranarr_qty = 0
+        for name, qty, _, _ in self.inputs:
+            item_name = self.format_item_name(name.get().strip())
+            if item_name.lower() == "grimy ranarr weed":
+                try:
+                    quantity = int(qty.get()) if qty.get().strip() else 0
+                    self.grimy_ranarr_qty += quantity
+                except ValueError:
+                    continue
+        # Update all output quantities for Prayer potion(4)
+        for name, qty, price, total in self.outputs:
+            if self.format_item_name(name.get().strip()).lower() == "prayer potion(4)":
+                self.on_change_output(name, qty, price, total)
+
     def on_change_input(self, name, qty, price, total):
-        """Handle changes for input items."""
+        """Handle changes for input items and track Grimy ranarr weed quantity."""
         item_name = self.format_item_name(name.get().strip())
         if not item_name:  # Skip if item name is empty
+            price.delete(0, tk.END)
+            price.insert(0, "N/A")
+            total.configure(text="N/A")
+            self.update_grimy_ranarr_qty()
+            self.update_calculations()
             return
 
         try:
@@ -287,6 +309,7 @@ class ProfitToolApp:
             price.delete(0, tk.END)
             price.insert(0, "N/A")
             total.configure(text="N/A")
+            self.update_grimy_ranarr_qty()
             self.update_calculations()
             return
 
@@ -297,6 +320,7 @@ class ProfitToolApp:
             price.delete(0, tk.END)
             price.insert(0, "N/A")
             total.configure(text="N/A")
+            self.update_grimy_ranarr_qty()
             self.update_calculations()
             return
 
@@ -306,6 +330,7 @@ class ProfitToolApp:
             price.delete(0, tk.END)
             price.insert(0, "N/A")
             total.configure(text="N/A")
+            self.update_grimy_ranarr_qty()
             self.update_calculations()
             return
 
@@ -319,6 +344,7 @@ class ProfitToolApp:
                 price.delete(0, tk.END)
                 price.insert(0, "N/A")
                 total.configure(text="N/A")
+                self.update_grimy_ranarr_qty()
                 self.update_calculations()
                 return
         else:
@@ -331,6 +357,7 @@ class ProfitToolApp:
                 price.delete(0, tk.END)
                 price.insert(0, "N/A")
                 total.configure(text="N/A")
+                self.update_grimy_ranarr_qty()
                 self.update_calculations()
                 return
 
@@ -338,22 +365,34 @@ class ProfitToolApp:
             total.configure(text=f"{current_price * quantity:,.0f}")
         else:
             total.configure(text="N/A")
+        self.update_grimy_ranarr_qty()
         self.update_calculations()
 
     def on_change_output(self, name, qty, price, total):
-        """Handle changes for output items."""
+        """Handle changes for output items, adjusting qty for Prayer potion(4)."""
         item_name = self.format_item_name(name.get().strip())
         if not item_name:  # Skip if item name is empty
-            return
-
-        try:
-            quantity = int(qty.get()) if qty.get().strip() else 1  # Default to 1 if qty is empty
-        except ValueError:
             price.delete(0, tk.END)
             price.insert(0, "N/A")
             total.configure(text="N/A")
             self.update_calculations()
             return
+
+        # Check if the item is Prayer potion(4) and adjust quantity
+        if item_name.lower() == "prayer potion(4)":
+            adjusted_qty = (self.grimy_ranarr_qty * 3) // 4  # Integer division to round down
+            qty.delete(0, tk.END)
+            qty.insert(0, f"{adjusted_qty}")
+            quantity = adjusted_qty
+        else:
+            try:
+                quantity = int(qty.get()) if qty.get().strip() else 1  # Default to 1 if qty is empty
+            except ValueError:
+                price.delete(0, tk.END)
+                price.insert(0, "N/A")
+                total.configure(text="N/A")
+                self.update_calculations()
+                return
 
         print(f"Output Item: {item_name}, Qty: {quantity}")  # Debug
         item_id = self.tool.items.get(item_name)
@@ -433,6 +472,7 @@ class ProfitToolApp:
             price.destroy()
             total.destroy()
             self.input_row -= 1
+            self.update_grimy_ranarr_qty()
             self.update_calculations()
 
     def add_output_item(self):
